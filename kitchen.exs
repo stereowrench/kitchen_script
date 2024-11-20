@@ -1,9 +1,94 @@
-defmodule Recipe do
-  defstruct [:name, :ingredients, :steps, :makes, :servings]
+defmodule Kitchen.Ingredient do
+  defstruct [:label, :ingredient, :qty, :recipe]
 end
 
-defmodule Ingredient do
-  defstruct [:label, :ingredient, :qty, :recipe]
+defprotocol Kitchen.Techniques.Poach do
+  @spec recipe(t) :: Kitchen.Recipe.t()
+  def recipe(t)
+end
+
+defmodule Kitchen.Recipe do
+  alias Kitchen.Recipe
+
+  @type t :: %__MODULE__{
+          name: String.t(),
+          ingredients: [%Kitchen.Ingredient{}],
+          steps: [String.t()],
+          makes: {integer(), atom()},
+          servings: atom()
+        }
+  defstruct [:name, :ingredients, :steps, :makes, :servings]
+
+  defmodule RecipeMacros do
+    alias Kitchen.Ingredient
+
+    defmacro source({:ingredient, _, ingredient}) do
+      quote do
+        {:source, unquote(ingredient)}
+      end
+    end
+
+    defmacro make({:ingredient, _, ingredient}) do
+      quote do
+        {:make, unquote(ingredient)}
+      end
+    end
+
+    def create_ingredient({:make, [label, ingredient, {qty, unit}]}) do
+      %Ingredient{
+        label: label,
+        ingredient: ingredient,
+        qty: {qty, unit},
+        recipe: ingredient
+      }
+    end
+
+    def create_ingredient({:source, [label, ingredient, {qty, unit}]}) do
+      %Ingredient{
+        label: label,
+        ingredient: ingredient,
+        qty: {qty, unit}
+      }
+    end
+
+    defmacro ingredients(do: {:__block__, _, ingredients}) do
+      quote do
+        var!(ingredients) =
+          Enum.map(unquote(ingredients), &Kitchen.Recipe.RecipeMacros.create_ingredient(&1))
+      end
+    end
+
+    defmacro step(string) do
+      quote do
+        unquote(string)
+      end
+    end
+
+    defmacro steps(do: {:__block__, _, steps}) do
+      quote do
+        var!(steps) = Enum.map(unquote(steps), & &1)
+      end
+    end
+
+    # TODO makes and servings
+  end
+
+  defmacro recipe(name, do: recipe_instrs) do
+    quote do
+      import RecipeMacros
+
+      var!(steps) = nil
+      unquote(recipe_instrs)
+
+      %Kitchen.Recipe{
+        name: unquote(name),
+        ingredients: var!(ingredients),
+        steps: var!(steps)
+        # makes: makes,
+        # servings: servings
+      }
+    end
+  end
 end
 
 defmodule RecipeUnits do
@@ -65,6 +150,9 @@ defmodule RecipeUnits do
 end
 
 defmodule Kitchen do
+  alias Kitchen.Ingredient
+  alias Kitchen.Recipe
+
   defmacro __using__(_) do
     quote do
       import Kitchen
@@ -302,6 +390,7 @@ defmodule Kitchen do
               |> Enum.map(& &1.qty)
               |> RecipeUnits.total()
 
+            # TODO highlight included recipes
             if length(ingredients) == 1 do
               [ingredient] = ingredients
               "#{place}. #{render_unit(ingredient.qty)} #{ingredient.ingredient}\n"
@@ -355,6 +444,24 @@ defmodule Kitchen do
   end
 end
 
+defmodule Kitchen.Ingredients.Eggs do
+  defstruct []
+end
+
+defimpl Kitchen.Techniques.Poach, for: Kitchen.Ingredients.Eggs do
+  alias Kitchen.Recipe
+  require Recipe
+
+  def recipe(_egg) do
+    Recipe.recipe "poached egg" do
+      ingredients do
+        source(ingredient(:eggs, "eggs", {1, :each}))
+        make(ingredient(:eggs2, "eggs", {1, :each}))
+      end
+    end
+  end
+end
+
 defmodule MyRecipe do
   use Kitchen
 
@@ -383,5 +490,15 @@ defmodule MyRecipe do
 
   make(1, "creme brulee")
 
-  print_kitchen()
+  # print_kitchen()
 end
+
+defmodule Thing do
+  def bar() do
+    egg = %Kitchen.Ingredients.Eggs{}
+    IO.inspect(egg)
+    Kitchen.Techniques.Poach.recipe(egg)
+  end
+end
+
+Thing.bar()
