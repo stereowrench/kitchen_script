@@ -15,6 +15,7 @@ defmodule Kitchen do
       Module.register_attribute(__MODULE__, :kitchen_steps, accumulate: true)
       # Module.register_attribute(__MODULE__, :kitchen_makes)
       Module.register_attribute(__MODULE__, :kitchen_ingredients, accumulate: true)
+      Module.register_attribute(__MODULE__, :kitchen_final, accumulate: true)
       # Module.register_attribute(__MODULE__, :kitchen_ingredient_bindings, accumulate: false)
     end
   end
@@ -79,15 +80,18 @@ defmodule Kitchen do
     end
   end
 
-  def render_unit()
+  def render_unit({qty, unit}) do
+    "#{qty} #{unit}"
+  end
 
   def render_steps(steps, ingredients) do
     bindings =
       for %{label: label, qty: qty} <- ingredients do
         {label, render_unit(qty)}
       end
+
     for step <- steps do
-      EEx.eval_string(step, bindings)
+      EEx.eval_string(step, assigns: bindings)
     end
   end
 
@@ -109,20 +113,66 @@ defmodule Kitchen do
         raise "no recipe"
       end
 
-      IEx.Info.info(recipe.makes) |> IO.inspect()
       scale = unquote(qty) / recipe.makes
 
       # TODO limit scale down
 
       ingredients = Kitchen.scale_down_ingredients(recipe.ingredients, scale)
 
-      %Recipe{
+      @kitchen_final %Recipe{
         name: recipe.name,
         ingredients: ingredients,
         steps: Kitchen.render_steps(recipe.steps, ingredients),
         makes: unquote(qty)
       }
-      |> IO.inspect()
+    end
+  end
+
+  defmacro print_kitchen() do
+    quote do
+      for recipe <- @kitchen_final do
+        grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
+        ingredient_list =
+          for {place, {name, ingredients}} <-
+                Enum.zip(1..length(Map.keys(grouped_ingredients)), grouped_ingredients) do
+            # TODO unit conversion and summation
+            # total =
+            #   ingredients
+            #   |> Enum.map(& &1.qty)
+            #   |> Enum.sum()
+
+            if length(ingredients) == 1 do
+              [ingredient] = ingredients
+              "#{place}. #{render_unit(ingredient.qty)} #{ingredient.ingredient}\n"
+            else
+              each =
+                for ea <- ingredients do
+                  String.pad_leading("#{ea.label} - #{render_unit(ea.qty)}", length(place) + 1)
+                end
+                |> Enum.join("\n")
+
+              """
+              #{place}. #{name}
+              #{each}
+              """
+            end
+          end
+
+        step_list =
+          for {place, step} <- Enum.zip(1..length(recipe.steps), recipe.steps) do
+            "#{place}. #{step}"
+          end
+
+        IO.puts("""
+        #{recipe.name}
+
+        # Ingredients
+        #{ingredient_list}
+
+        # Steps
+        #{step_list}
+        """)
+      end
     end
   end
 end
@@ -140,12 +190,12 @@ defmodule MyRecipe do
 
     steps do
       step("""
-        Heat <%= @eggs %>
+      Heat <%= @eggs %>
       """)
     end
   end
 
   make(1, "creme brulee")
 
-  IO.inspect(@kitchen_recipes)
+  print_kitchen()
 end
