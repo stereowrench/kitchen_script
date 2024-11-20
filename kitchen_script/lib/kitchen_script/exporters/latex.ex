@@ -157,6 +157,6 @@ defmodule KitchenScript.Exporters.LaTeX do
   end
 
   defp write!(str) do
-    File.write!("exported.tex", str)
+    File.write!("latex/exported.tex", str)
   end
 end

@@ -24,3 +24,5 @@ kitchen_script-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+/latex
