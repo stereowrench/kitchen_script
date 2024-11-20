@@ -3,7 +3,7 @@ defmodule Recipe do
 end
 
 defmodule Ingredient do
-  defstruct [:label, :ingredient, :qty]
+  defstruct [:label, :ingredient, :qty, :recipe]
 end
 
 defmodule RecipeUnits do
@@ -40,6 +40,27 @@ defmodule RecipeUnits do
     m
     |> scale_down()
     |> scale_up()
+  end
+
+  def total(measurements = [{_, :each} | _]) do
+    t =
+      for {q, :each} <- measurements do
+        q
+      end
+      |> Enum.sum()
+
+    {t, :each}
+  end
+
+  def total(measurements) do
+    t =
+      for m <- measurements do
+        scale_down(m)
+      end
+      |> Enum.map(fn {q, :tsp} -> q end)
+      |> Enum.sum()
+
+    scale_up({t, :tsp})
   end
 end
 
@@ -103,7 +124,8 @@ defmodule Kitchen do
       ing = %Ingredient{
         label: unquote(label),
         ingredient: unquote(name),
-        qty: unquote(qty)
+        qty: unquote(qty),
+        recipe: if(@kitchen_make_recipe, do: unquote(name))
       }
 
       @kitchen_ingredients ing
@@ -136,8 +158,8 @@ defmodule Kitchen do
 
   def render_steps(steps, ingredients) do
     bindings =
-      for %{label: label, qty: qty} <- ingredients do
-        {label, render_unit(qty)}
+      for %{label: label, qty: qty, ingredient: name} <- ingredients do
+        {label, render_unit(qty) <> " #{name}"}
       end
 
     for step <- steps do
@@ -151,19 +173,45 @@ defmodule Kitchen do
     end
   end
 
-  defmacro make(qty, name) when is_integer(qty) do
+  defmacro make(qty, name, remainder \\ nil) do
     quote do
-      unless is_integer(unquote(qty)) do
-        raise "Only integer servings"
+      case unquote(qty) do
+        q when is_integer(q) ->
+          :ok
+
+        {q, _} ->
+          :ok
+
+        _ ->
+          raise "Only integer servings"
       end
 
-      recipe = Enum.find(@kitchen_recipes, &(&1.name == unquote(name)))
+      qty = unquote(qty)
+      remainder = unquote(remainder)
+      name = unquote(name)
+
+      recipes =
+        if remainder,
+          do: remainder,
+          else: @kitchen_recipes
+
+      recipe = Enum.find(recipes, &(&1.name == name))
 
       unless recipe do
         raise "no recipe"
       end
 
-      scale = unquote(qty) / recipe.servings
+      scale =
+        if is_integer(qty) do
+          qty / recipe.servings
+        else
+          {a, :tsp} =
+            RecipeUnits.scale_down(unquote(qty))
+
+          {b, :tsp} = RecipeUnits.scale_down(recipe.makes)
+
+          a / b
+        end
 
       # TODO limit scale down
 
@@ -178,49 +226,49 @@ defmodule Kitchen do
         makes: RecipeUnits.scale({q * scale, unit}),
         servings: unquote(qty)
       }
+
+      @kitchen_final_hold @kitchen_final
+      Module.delete_attribute(__MODULE__, :kitchen_final)
+
+      @kitchen_final Kitchen.process_recipes(@kitchen_final_hold, @kitchen_recipes)
     end
   end
 
-  # TODO scale units
-  # defmacro make({qty, unit}, name) when is_integer(qty) do
-  #   quote do
-  #     unless is_integer(unquote(qty)) do
-  #       raise "Only integer servings"
-  #     end
+  def process_recipes([], _kitchen_recipes), do: []
 
-  #     recipe = Enum.find(@kitchen_recipes, &(&1.name == unquote(name)))
+  def process_recipes(recipe_list, kitchen_recipes) do
+    sub_recipes =
+      for recipe <- recipe_list do
+        for ingredient <- recipe.ingredients do
+          if ingredient.recipe, do: ingredient.recipe
+        end
+      end
 
-  #     unless recipe do
-  #       raise "no recipe"
-  #     end
+    subs =
+      kitchen_recipes
+      |> Enum.filter(&(&1.name in sub_recipes))
 
-  #     scale = unquote(qty) / recipe.makes
+    recursive = process_recipes(subs, kitchen_recipes)
 
-  #     # TODO limit scale down
+    IO.inspect(recipe_list)
+    IO.inspect(kitchen_recipes)
 
-  #     ingredients = Kitchen.scale_down_ingredients(recipe.ingredients, scale)
-
-  #     @kitchen_final %Recipe{
-  #       name: recipe.name,
-  #       ingredients: ingredients,
-  #       steps: Kitchen.render_steps(recipe.steps, ingredients),
-  #       makes: unquote(qty)
-  #     }
-  #   end
-  # end
+    [recipe_list | recursive] |> List.flatten()
+    # TODO merge duplicates
+  end
 
   defmacro print_kitchen() do
     quote do
-      for recipe <- @kitchen_final do
+      for recipe <- List.flatten(@kitchen_final) do
         grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
+
         ingredient_list =
           for {place, {name, ingredients}} <-
                 Enum.zip(1..length(Map.keys(grouped_ingredients)), grouped_ingredients) do
-            # TODO unit conversion and summation
-            # total =
-            #   ingredients
-            #   |> Enum.map(& &1.qty)
-            #   |> Enum.sum()
+            total =
+              ingredients
+              |> Enum.map(& &1.qty)
+              |> RecipeUnits.total()
 
             if length(ingredients) == 1 do
               [ingredient] = ingredients
@@ -228,12 +276,13 @@ defmodule Kitchen do
             else
               each =
                 for ea <- ingredients do
-                  String.pad_leading("#{ea.label} - #{render_unit(ea.qty)}", length(place) + 1)
+                  String.duplicate(" ", String.length(to_string(place)) + 2) <>
+                    "#{ea.label} - #{render_unit(ea.qty)}"
                 end
                 |> Enum.join("\n")
 
               """
-              #{place}. #{name}
+              #{place}. #{render_unit(total)} #{name}
               #{each}
               """
             end
@@ -253,8 +302,8 @@ defmodule Kitchen do
         # Steps
         #{step_list}
 
-        #{inspect @kitchen_prep_list}
-        #{inspect @kitchen_shopping_list}
+        #{inspect(@kitchen_prep_list)}
+        #{inspect(@kitchen_shopping_list)}
         """)
       end
     end
@@ -262,6 +311,7 @@ defmodule Kitchen do
 
   defmacro source(a = {:ingredient, _line, _body}) do
     quote do
+      @kitchen_make_recipe false
       unquote(a)
       @kitchen_shopping_list @kitchen_ingredient
     end
@@ -269,6 +319,7 @@ defmodule Kitchen do
 
   defmacro make(a = {:ingredient, _line, _body}) do
     quote do
+      @kitchen_make_recipe true
       unquote(a)
       @kitchen_prep_list @kitchen_ingredient
     end
@@ -281,16 +332,17 @@ defmodule MyRecipe do
   recipe "bar ingredient" do
     servings(2)
     makes({2, :cup})
-    source ingredient(:baz, "baz", {1, :cup})
+    source(ingredient(:baz, "baz", {1, :cup}))
   end
 
   recipe "creme brulee" do
     servings(4)
 
     ingredients do
-      source ingredient(:eggs, "eggs", {2, :each})
-      source ingredient(:milk, "milk", {1, :cup})
-      make ingredient(:foo, "bar ingredient", {1, :cup})
+      source(ingredient(:eggs, "eggs", {2, :each}))
+      source(ingredient(:eggs_2, "eggs", {3, :each}))
+      source(ingredient(:milk, "milk", {1, :cup}))
+      make(ingredient(:foo, "bar ingredient", {1, :cup}))
     end
 
     steps do
