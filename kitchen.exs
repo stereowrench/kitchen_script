@@ -6,6 +6,43 @@ defmodule Ingredient do
   defstruct [:label, :ingredient, :qty]
 end
 
+defmodule RecipeUnits do
+  def scale_down({q, :quart}) do
+    scale_down({q * 2, :pint})
+  end
+
+  def scale_down({q, :pint}) do
+    scale_down({q * 2, :cup})
+  end
+
+  def scale_down({q, :cup}) do
+    scale_down({q * 8, :oz})
+  end
+
+  def scale_down({q, :oz}) do
+    scale_down({q * 2, :tbsp})
+  end
+
+  def scale_down({q, :tbsp}) do
+    {q * 3, :tsp}
+  end
+
+  def scale_up({q, :tsp}) when q < 3, do: {q, :tsp}
+  def scale_up({q, :tsp}) when q < 12, do: {q / 12, :tbsp}
+  def scale_up({q, :tsp}) when q < 48, do: {q / 48, :cup}
+  def scale_up({q, :tsp}) when q < 192, do: {q / 192, :pint}
+  def scale_up({q, :tsp}) when q < 768, do: {q / 768, :quart}
+  def scale_up({q, :tsp}), do: {q / 768, :gallon}
+
+  def scale(m = {_, :each}), do: m
+
+  def scale(m) do
+    m
+    |> scale_down()
+    |> scale_up()
+  end
+end
+
 defmodule Kitchen do
   defmacro __using__(_) do
     quote do
@@ -110,7 +147,7 @@ defmodule Kitchen do
 
   def scale_down_ingredients(ingredients, scale) do
     for ingredient = %{qty: {d, unit}} <- ingredients do
-      %{ingredient | qty: {d * scale, unit}}
+      %{ingredient | qty: RecipeUnits.scale({d * scale, unit})}
     end
   end
 
@@ -138,7 +175,7 @@ defmodule Kitchen do
         name: recipe.name,
         ingredients: ingredients,
         steps: Kitchen.render_steps(recipe.steps, ingredients),
-        makes: {q * scale, unit},
+        makes: RecipeUnits.scale({q * scale, unit}),
         servings: unquote(qty)
       }
     end
