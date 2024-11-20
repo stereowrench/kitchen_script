@@ -64,21 +64,6 @@ defmodule KitchenScript do
   #   end
   # end
 
-  def render_unit({qty, unit}) do
-    "#{qty} #{unit}"
-  end
-
-  def render_steps(steps, ingredients) do
-    bindings =
-      for %{label: label, qty: qty, ingredient: name} <- ingredients do
-        {label, render_unit(qty) <> " #{name}"}
-      end
-
-    for step <- steps do
-      EEx.eval_string(step, assigns: bindings)
-    end
-  end
-
   def scale_down_ingredients(ingredients, scale) do
     for ingredient = %{qty: {d, unit}} <- ingredients do
       %{ingredient | qty: KitchenScript.RecipeUnits.scale({d * scale, unit})}
@@ -134,7 +119,7 @@ defmodule KitchenScript do
       @kitchen_final %Recipe{
         name: recipe.name,
         ingredients: ingredients,
-        steps: KitchenScript.render_steps(recipe.steps, ingredients),
+        steps: recipe.steps,
         makes: KitchenScript.RecipeUnits.scale({q * scale, unit}),
         servings: unquote(qty)
       }
@@ -178,30 +163,17 @@ defmodule KitchenScript do
     end)
   end
 
-  def gather_ingredients(recipes) do
-    ingredients =
-      recipes
-      |> Enum.map(& &1.ingredients)
-      |> List.flatten()
-      |> Enum.group_by(& &1.ingredient)
-
-    IO.puts("# Ingredients")
-
-    for {name, ingredient} <- ingredients do
-      scaled =
-        KitchenScript.RecipeUnits.total(Enum.map(ingredient, & &1.qty))
-
-      IO.puts("- #{KitchenScript.render_unit(scaled)} x #{name}")
-    end
-
-    IO.puts("")
-  end
-
-  defmacro print_kitchen() do
+  defmacro print_kitchen(output \\ :console) do
     quote location: :keep do
       recipes = KitchenScript.order_recipes(List.flatten(@kitchen_final))
       # TODO shopping list
-      KitchenScript.Exporters.Console.export(recipes)
+      case unquote(output) do
+        :console ->
+          KitchenScript.Exporters.Console.export(recipes)
+
+        :latex ->
+          KitchenScript.Exporters.LaTeX.export(recipes)
+      end
     end
   end
 end

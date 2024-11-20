@@ -1,2 +1,2 @@
-defmodule KitchenScript.Exporters.Latex do
+defmodule KitchenScript.Exporters.LaTeX do
 end

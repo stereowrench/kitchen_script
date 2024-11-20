@@ -14,10 +14,31 @@ defmodule KitchenScript.Exporters.Console do
     end
   end
 
+  def gather_ingredients(recipes) do
+    ingredients =
+      recipes
+      |> Enum.map(& &1.ingredients)
+      |> List.flatten()
+      |> Enum.group_by(& &1.ingredient)
+
+    IO.puts("# Ingredients")
+
+    for {name, ingredient} <- ingredients do
+      scaled =
+        KitchenScript.RecipeUnits.total(Enum.map(ingredient, & &1.qty))
+
+      IO.puts("- #{render_unit(scaled)} x #{name}")
+    end
+
+    IO.puts("")
+  end
+
   def export(recipes) do
-    KitchenScript.gather_ingredients(recipes)
+    gather_ingredients(recipes)
 
     for recipe <- recipes do
+      steps = render_steps(recipe.steps, recipe.ingredients)
+
       grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
 
       ingredient_list =
@@ -48,7 +69,8 @@ defmodule KitchenScript.Exporters.Console do
         end
 
       step_list =
-        for {place, step} <- Enum.zip(1..length(recipe.steps), recipe.steps) do
+        for {place, step} <-
+              Enum.zip(1..length(recipe.steps), steps) do
           "#{place}. #{step}"
         end
 
