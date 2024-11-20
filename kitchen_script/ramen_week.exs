@@ -24,7 +24,7 @@ defmodule RamenWeek do
 
   end
 
-  make({1, :tbsp}, "tonkotsu broth")
+  make({2, :tbsp}, "tonkotsu broth")
 
   print_kitchen(:latex)
 end

@@ -4,6 +4,7 @@ defmodule KitchenScript do
   """
 
   require KitchenScript.Recipe
+  alias KitchenScript.RecipeUnits
   alias KitchenScript.Recipe
 
   defmacro __using__(_) do
@@ -116,12 +117,14 @@ defmodule KitchenScript do
 
       {q, unit} = recipe.makes
 
+      servings = if is_integer(qty), do: qty
+
       @kitchen_final %Recipe{
         name: recipe.name,
         ingredients: ingredients,
         steps: recipe.steps,
         makes: KitchenScript.RecipeUnits.scale({q * scale, unit}),
-        servings: unquote(qty)
+        servings: servings
       }
 
       @kitchen_final_hold @kitchen_final

@@ -94,6 +94,10 @@ defmodule KitchenScript.Exporters.LaTeX do
     end
   end
 
+  defp format_yield({q, unit}) do
+    "#{q} #{unit}"
+  end
+
   defp format_recipe(recipe) do
     steps = render_steps(recipe.steps, recipe.ingredients)
 
@@ -155,6 +159,8 @@ defmodule KitchenScript.Exporters.LaTeX do
     """
     \\section{#{recipe.name}}
     \\label{ingredient:#{recipe.name}}
+    \\emph{Makes #{format_yield(recipe.makes)}}
+
     """ <>
       ingredient_string <> steps_string
   end
