@@ -256,9 +256,23 @@ defmodule Kitchen do
     # TODO merge duplicates
   end
 
+  def order_recipes(recipes) do
+    IO.inspect(recipes)
+
+    Enum.sort_by(recipes, & &1, fn x, y ->
+      IO.inspect([x, y])
+
+      if x.name in Enum.map(y.ingredients, & &1.recipe) do
+        true
+      else
+        false
+      end
+    end)
+  end
+
   defmacro print_kitchen() do
     quote do
-      for recipe <- List.flatten(@kitchen_final) do
+      for recipe <- Kitchen.order_recipes(List.flatten(@kitchen_final)) do
         grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
 
         ingredient_list =
