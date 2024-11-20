@@ -2,6 +2,10 @@ defmodule KitchenScript.Exporters.LaTeX do
   def preamble(title, author) do
     """
     \\documentclass{article}
+
+    \\usepackage{varioref}
+    \\usepackage{hyperref}
+    \\usepackage{cleveref}
     \\title{#{title}}
     \\author{#{author}}
 
@@ -14,6 +18,10 @@ defmodule KitchenScript.Exporters.LaTeX do
   \\end{document}
   """
 
+  defp clean_name(name) do
+    String.replace(to_string(name), ~r"_", "\\textunderscore{}")
+  end
+
   defp totals(recipes) do
     ingredients =
       recipes
@@ -23,20 +31,33 @@ defmodule KitchenScript.Exporters.LaTeX do
 
     rows =
       for {name, ingredient} <- ingredients do
+        name_formatted =
+          if hd(ingredient).recipe do
+            "\\textbf{#{clean_name(name)}}"
+          else
+            clean_name(name)
+          end
+
         scaled =
           KitchenScript.RecipeUnits.total(Enum.map(ingredient, & &1.qty))
 
-        "#{ingredient} & #{scaled}"
+        "#{name_formatted} & #{render_unit(scaled)}"
       end
+      |> Enum.intersperse("\\\\")
       |> Enum.join("\n")
 
     """
+    \\begin{figure}[h]
+    \\centering
     \\begin{tabular}{ll}
-    Ingredient & Qty.\\\\
+    \\textbf{Ingredient} & \\textbf{Qty.}\\\\
+    \\hline
     """ <>
       rows <>
       """
+
       \\end{tabular}
+      \\end{figure}
       """
   end
 
@@ -50,8 +71,8 @@ defmodule KitchenScript.Exporters.LaTeX do
         {label, render_unit(qty) <> " #{name}"}
       end
 
-    for step <- steps do
-      EEx.eval_string(step, assigns: bindings)
+    for step <- steps, into: "" do
+      "\\item " <> EEx.eval_string(step, assigns: bindings) <> "\n"
     end
   end
 
@@ -70,35 +91,54 @@ defmodule KitchenScript.Exporters.LaTeX do
         # TODO highlight included recipes
         if length(ingredients) == 1 do
           [ingredient] = ingredients
-          "\\item #{render_unit(ingredient.qty)} #{ingredient.ingredient}\n"
+
+          if ingredient.recipe do
+            "\\item #{render_unit(ingredient.qty)} \\textbf{#{ingredient.ingredient}}(\\cref{ingredient:#{ingredient.ingredient}})\n"
+          else
+            "\\item #{render_unit(ingredient.qty)} #{ingredient.ingredient}\n"
+          end
         else
           each =
             for ea <- ingredients do
-              "#{ea.label} - #{render_unit(ea.qty)}"
+              "#{clean_name(ea.label)} & #{render_unit(ea.qty)}"
             end
-            |> Enum.join("\n\n")
+            |> Enum.intersperse("\\\\")
+            |> Enum.join("\n")
 
           """
-          \\item #{render_unit(total)} #{name}
+          \\item #{render_unit(total)} #{clean_name(name)}
 
+          \\begin{tabular}{ll}
           #{each}
+          \\end{tabular}
           """
         end
       end
 
     ingredient_string =
-      "\\begin{enumerate}" <>
+      """
+      \\subsection{Ingredients}
+      \\begin{enumerate}
+      """ <>
         Enum.join(ingredient_list, "\n") <>
         "\\end{enumerate}"
 
+    # for step <- recipe.steps, into: "" do
+    #   "\\item #{step}\n"
+    # end <>
     steps_string =
-      "\\begin{enumerate}\n" <>
-        for step <- recipe.steps do
-          "\\item #{step}\n"
-        end <>
+      """
+      \\subsection{Steps}
+      \\begin{enumerate}
+      """ <>
+        steps <>
         "\\end{enumerate}\n"
 
-    steps <> ingredient_string <> steps_string
+    """
+    \\section{#{recipe.name}}
+    \\label{ingredient:#{recipe.name}}
+    """ <>
+      ingredient_string <> steps_string
   end
 
   defp formatted_recipes(recipes) do
@@ -117,6 +157,6 @@ defmodule KitchenScript.Exporters.LaTeX do
   end
 
   defp write!(str) do
-    File.write!(str, "exported.tex")
+    File.write!("exported.tex", str)
   end
 end
