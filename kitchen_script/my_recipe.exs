@@ -34,7 +34,7 @@ defmodule MyRecipe do
 
   make(1, "creme brulee")
 
-  print_kitchen()
+  print_kitchen(:latex)
 end
 
 # defmodule Thing do
