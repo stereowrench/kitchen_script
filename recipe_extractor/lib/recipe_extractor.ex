@@ -17,7 +17,12 @@ defmodule RecipeExtractor do
     end
   end
 
-  def extract_recipe()
+  def extract_recipe(jsonld) do
+    recipe = jsonld |> Enum.find(&(&1["@type"] == ["http://schema.org/Recipe"]))
+
+    # http://schema.org/recipeYield
+    # http://schema.org/recipeInstructions
+  end
 
   def extract_from_html(html_content) do
     with {:ok, document} <- Floki.parse_document(html_content),
