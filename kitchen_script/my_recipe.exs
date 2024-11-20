@@ -1,5 +1,5 @@
 defmodule MyRecipe do
-  use Kitchen
+  use KitchenScript
 
   recipe "bar ingredient" do
     servings(2)

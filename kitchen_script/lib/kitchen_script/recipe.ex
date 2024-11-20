@@ -1,6 +1,4 @@
 defmodule KitchenScript.Recipe do
-  alias KitchenScript.Recipe
-
   @type t :: %__MODULE__{
           name: String.t(),
           ingredients: [%KitchenScript.Ingredient{}],

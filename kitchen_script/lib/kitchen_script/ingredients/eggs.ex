@@ -2,8 +2,8 @@ defmodule KitchenScript.Ingredients.Eggs do
   defstruct []
 end
 
-defimpl Kitchen.Techniques.Poach, for: Kitchen.Ingredients.Eggs do
-  alias Kitchen.Recipe
+defimpl KitchenScript.Techniques.Poach, for: KitchenScript.Ingredients.Eggs do
+  alias KitchenScript.Recipe
   require Recipe
 
   def recipe(_egg) do

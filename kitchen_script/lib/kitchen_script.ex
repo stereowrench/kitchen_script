@@ -8,7 +8,7 @@ defmodule KitchenScript do
 
   defmacro __using__(_) do
     quote do
-      import Kitchen
+      import KitchenScript
 
       Module.register_attribute(__MODULE__, :kitchen_recipes, accumulate: true)
       Module.register_attribute(__MODULE__, :kitchen_steps, accumulate: true)
@@ -81,7 +81,7 @@ defmodule KitchenScript do
 
   def scale_down_ingredients(ingredients, scale) do
     for ingredient = %{qty: {d, unit}} <- ingredients do
-      %{ingredient | qty: RecipeUnits.scale({d * scale, unit})}
+      %{ingredient | qty: KitchenScript.RecipeUnits.scale({d * scale, unit})}
     end
   end
 
@@ -118,31 +118,31 @@ defmodule KitchenScript do
           qty / recipe.servings
         else
           {a, :tsp} =
-            RecipeUnits.scale_down(unquote(qty))
+            KitchenScript.RecipeUnits.scale_down(unquote(qty))
 
-          {b, :tsp} = RecipeUnits.scale_down(recipe.makes)
+          {b, :tsp} = KitchenScript.RecipeUnits.scale_down(recipe.makes)
 
           a / b
         end
 
       # TODO limit scale down
 
-      ingredients = Kitchen.scale_down_ingredients(recipe.ingredients, scale)
+      ingredients = KitchenScript.scale_down_ingredients(recipe.ingredients, scale)
 
       {q, unit} = recipe.makes
 
       @kitchen_final %Recipe{
         name: recipe.name,
         ingredients: ingredients,
-        steps: Kitchen.render_steps(recipe.steps, ingredients),
-        makes: RecipeUnits.scale({q * scale, unit}),
+        steps: KitchenScript.render_steps(recipe.steps, ingredients),
+        makes: KitchenScript.RecipeUnits.scale({q * scale, unit}),
         servings: unquote(qty)
       }
 
       @kitchen_final_hold @kitchen_final
       Module.delete_attribute(__MODULE__, :kitchen_final)
 
-      @kitchen_final Kitchen.process_recipes(@kitchen_final_hold, @kitchen_recipes)
+      @kitchen_final KitchenScript.process_recipes(@kitchen_final_hold, @kitchen_recipes)
     end
   end
 
@@ -191,7 +191,7 @@ defmodule KitchenScript do
       scaled =
         KitchenScript.RecipeUnits.total(Enum.map(ingredient, & &1.qty))
 
-      IO.puts("- #{Kitchen.render_unit(scaled)} x #{name}")
+      IO.puts("- #{KitchenScript.render_unit(scaled)} x #{name}")
     end
 
     IO.puts("")
@@ -199,9 +199,9 @@ defmodule KitchenScript do
 
   defmacro print_kitchen() do
     quote location: :keep do
-      recipes = Kitchen.order_recipes(List.flatten(@kitchen_final))
+      recipes = KitchenScript.order_recipes(List.flatten(@kitchen_final))
       # TODO shopping list
-      Kitchen.gather_ingredients(recipes)
+      KitchenScript.gather_ingredients(recipes)
 
       for recipe <- recipes do
         grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
@@ -212,7 +212,7 @@ defmodule KitchenScript do
             total =
               ingredients
               |> Enum.map(& &1.qty)
-              |> RecipeUnits.total()
+              |> KitchenScript.RecipeUnits.total()
 
             # TODO highlight included recipes
             if length(ingredients) == 1 do
