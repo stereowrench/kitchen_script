@@ -3,7 +3,7 @@ defmodule Recipe do
 end
 
 defmodule Ingredient do
-  defstruct [:ingredient, :qty]
+  defstruct [:label, :ingredient, :qty]
 end
 
 defmodule Kitchen do
@@ -24,14 +24,6 @@ defmodule Kitchen do
       end
 
       unquote(recipe_instrs)
-
-      # IO.inspect(sub)
-
-      # recipes =
-      #   Map.put(recipes, unquote(name), %Recipe{
-      #     ingredients: sub.ingredients
-      #     # steps: sub.steps
-      #   })
 
       @kitchen_recipes %Recipe{
         name: unquote(name),
@@ -54,11 +46,17 @@ defmodule Kitchen do
     end
   end
 
-  defmacro ingredient(name, qty) do
+  defmacro ingredient(label, name, qty) do
     quote do
+      if Enum.find(@kitchen_ingredients, &(&1.label == unquote(label))) do
+        raise "Duplicate item"
+      end
+
       @kitchen_ingredients %Ingredient{ingredient: unquote(name), qty: unquote(qty)}
     end
   end
+
+  # defmacro step()
 end
 
 defmodule MyRecipe do
@@ -66,12 +64,15 @@ defmodule MyRecipe do
 
   recipe "creme brulee" do
     ingredients do
-      ingredient("eggs", {2, :each})
-      ingredient("milk", {1, :cup})
+      ingredient(:eggs, "eggs", {2, :each})
+      ingredient(:milk, "milk", {1, :cup})
     end
-  end
 
-  recipe "creme brulee" do
+    steps do
+      step("""
+
+      """)
+    end
   end
 
   IO.inspect(@kitchen_recipes)
