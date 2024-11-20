@@ -243,15 +243,14 @@ defmodule Kitchen do
           if ingredient.recipe, do: ingredient.recipe
         end
       end
+      |> List.flatten()
+      |> Enum.reject(&is_nil(&1))
 
     subs =
       kitchen_recipes
       |> Enum.filter(&(&1.name in sub_recipes))
 
     recursive = process_recipes(subs, kitchen_recipes)
-
-    IO.inspect(recipe_list)
-    IO.inspect(kitchen_recipes)
 
     [recipe_list | recursive] |> List.flatten()
     # TODO merge duplicates
@@ -294,12 +293,12 @@ defmodule Kitchen do
           end
 
         IO.puts("""
-        #{recipe.name}
+        # #{recipe.name}
 
-        # Ingredients
+        ## Ingredients
         #{ingredient_list}
 
-        # Steps
+        ## Steps
         #{step_list}
 
         #{inspect(@kitchen_prep_list)}
