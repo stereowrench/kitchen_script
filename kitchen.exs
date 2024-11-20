@@ -257,11 +257,7 @@ defmodule Kitchen do
   end
 
   def order_recipes(recipes) do
-    IO.inspect(recipes)
-
     Enum.sort_by(recipes, & &1, fn x, y ->
-      IO.inspect([x, y])
-
       if x.name in Enum.map(y.ingredients, & &1.recipe) do
         true
       else
@@ -270,9 +266,32 @@ defmodule Kitchen do
     end)
   end
 
+  def gather_ingredients(recipes) do
+    ingredients =
+      recipes
+      |> Enum.map(& &1.ingredients)
+      |> List.flatten()
+      |> Enum.group_by(& &1.ingredient)
+
+    IO.puts("# Ingredients")
+
+    for {name, ingredient} <- ingredients do
+      scaled =
+        RecipeUnits.total(Enum.map(ingredient, & &1.qty))
+
+      IO.puts("- #{Kitchen.render_unit(scaled)} x #{name}")
+    end
+
+    IO.puts("")
+  end
+
   defmacro print_kitchen() do
     quote do
-      for recipe <- Kitchen.order_recipes(List.flatten(@kitchen_final)) do
+      recipes = Kitchen.order_recipes(List.flatten(@kitchen_final))
+      # TODO shopping list
+      Kitchen.gather_ingredients(recipes)
+
+      for recipe <- recipes do
         grouped_ingredients = Enum.group_by(recipe.ingredients, & &1.ingredient)
 
         ingredient_list =
@@ -307,16 +326,13 @@ defmodule Kitchen do
           end
 
         IO.puts("""
-        # #{recipe.name}
+        ## #{recipe.name}
 
-        ## Ingredients
+        ### Ingredients
         #{ingredient_list}
 
-        ## Steps
+        ### Steps
         #{step_list}
-
-        #{inspect(@kitchen_prep_list)}
-        #{inspect(@kitchen_shopping_list)}
         """)
       end
     end
