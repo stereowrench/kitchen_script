@@ -458,6 +458,20 @@ defimpl Kitchen.Techniques.Poach, for: Kitchen.Ingredients.Eggs do
         source(ingredient(:eggs, "eggs", {1, :each}))
         make(ingredient(:eggs2, "eggs", {1, :each}))
       end
+
+      steps do
+        step("""
+        Bring pot to a simmer.
+        """)
+
+        step("""
+        Gently place <%= @eggs %> into the water.
+        """)
+
+        step("""
+        Cook for 4 minutes.
+        """)
+      end
     end
   end
 end
@@ -497,7 +511,9 @@ defmodule Thing do
   def bar() do
     egg = %Kitchen.Ingredients.Eggs{}
     IO.inspect(egg)
+
     Kitchen.Techniques.Poach.recipe(egg)
+    |> IO.inspect()
   end
 end
 
