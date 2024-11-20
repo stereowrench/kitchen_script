@@ -4,7 +4,7 @@ defmodule KitchenScript.Exporters.LaTeX do
     \\documentclass{article}
 
     \\usepackage{varioref}
-    \\usepackage{hyperref}
+    \\usepackage[hidelinks]{hyperref}
     \\usepackage{cleveref}
     \\usepackage{enumitem}
     \\setlist{nosep}
@@ -145,6 +145,13 @@ defmodule KitchenScript.Exporters.LaTeX do
         Enum.join(ingredient_list, "\n") <>
         "\\end{enumerate}"
 
+    note =
+      if recipe.note do
+        "\\footnote{#{recipe.note}}"
+      else
+        ""
+      end
+
     # for step <- recipe.steps, into: "" do
     #   "\\item #{step}\n"
     # end <>
@@ -159,7 +166,7 @@ defmodule KitchenScript.Exporters.LaTeX do
     """
     \\section{#{recipe.name}}
     \\label{ingredient:#{recipe.name}}
-    \\emph{Makes #{format_yield(recipe.makes)}}
+    \\emph{Makes #{format_yield(recipe.makes)}#{note}}
 
     """ <>
       ingredient_string <> steps_string

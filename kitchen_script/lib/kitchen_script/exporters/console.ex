@@ -1,4 +1,8 @@
 defmodule KitchenScript.Exporters.Console do
+  @moduledoc """
+  TODO
+  - Add "note" to console output
+  """
   def render_unit({qty, unit}) do
     "#{qty} #{unit}"
   end

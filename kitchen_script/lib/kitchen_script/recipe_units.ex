@@ -27,6 +27,10 @@ defmodule KitchenScript.RecipeUnits do
     {q * 16, :oz}
   end
 
+  def scale_down({q, :each}) do
+    {q, :each}
+  end
+
   def scale_up({q, :tsp}) when q < 3, do: {q, :tsp}
   def scale_up({q, :tsp}) when q < 12, do: {q / 3, :tbsp}
   def scale_up({q, :tsp}) when q < 48, do: {q / 12, :cup}

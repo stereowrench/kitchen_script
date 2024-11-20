@@ -4,9 +4,10 @@ defmodule KitchenScript.Recipe do
           ingredients: [%KitchenScript.Ingredient{}],
           steps: [String.t()],
           makes: {integer(), atom()},
-          servings: atom()
+          servings: atom(),
+          note: String.t()
         }
-  defstruct [:name, :ingredients, :steps, :makes, :servings]
+  defstruct [:name, :ingredients, :steps, :makes, :servings, :note]
 
   defmodule RecipeMacros do
     alias KitchenScript.Ingredient

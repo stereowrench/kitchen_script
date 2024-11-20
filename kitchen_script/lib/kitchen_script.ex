@@ -113,6 +113,31 @@ defmodule KitchenScript do
 
       # TODO limit scale down
 
+      min_scale =
+        for ingredient <- recipe.ingredients do
+          case RecipeUnits.scale_down(ingredient.qty) do
+            {a, :tsp} ->
+              1 / (4 * a)
+
+            {a, :oz} ->
+              1 / (4 * a)
+
+            {a, :each} ->
+              1 / (8 * a)
+          end
+
+          # {b, :tsp} = KitchenScript.RecipeUnits.scale_down(recipe.makes)
+        end
+        |> Enum.sort()
+        |> List.last()
+
+      {scale, note} =
+        if min_scale > scale do
+          {min_scale, "Recipe was scaled up to #{min_scale} of a recipe insteaed of #{scale}."}
+        else
+          {scale, nil}
+        end
+
       ingredients = KitchenScript.scale_down_ingredients(recipe.ingredients, scale)
 
       {q, unit} = recipe.makes
@@ -124,7 +149,8 @@ defmodule KitchenScript do
         ingredients: ingredients,
         steps: recipe.steps,
         makes: KitchenScript.RecipeUnits.scale({q * scale, unit}),
-        servings: servings
+        servings: servings,
+        note: note
       }
 
       @kitchen_final_hold @kitchen_final
