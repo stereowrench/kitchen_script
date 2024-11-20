@@ -3,14 +3,31 @@ defmodule KitchenScript.Exporters.Console do
     "#{qty} #{unit}"
   end
 
+  def time_string({q, :hours}) do
+    m = (q - floor(q)) * 60
+
+    if m > 0 do
+      "(#{q}h#{m}) "
+    else
+      "(#{q} hours) "
+    end
+  end
+
+  def time_string({q, :minutes}) do
+    "(#{q} minutes) "
+  end
+
+  def time_string(nil), do: ""
+
   def render_steps(steps, ingredients) do
     bindings =
       for %{label: label, qty: qty, ingredient: name} <- ingredients do
         {label, render_unit(qty) <> " #{name}"}
       end
 
-    for step <- steps do
-      EEx.eval_string(step, assigns: bindings)
+    for {step, time} <- steps do
+      "#{time_string(time)}" <>
+        EEx.eval_string(step, assigns: bindings)
     end
   end
 

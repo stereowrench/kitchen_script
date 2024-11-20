@@ -53,9 +53,9 @@ defmodule KitchenScript.Recipe do
       end
     end
 
-    defmacro step(string) do
+    defmacro step(string, time \\ nil) do
       quote do
-        unquote(string)
+        {unquote(string), unquote(time)}
       end
     end
 
@@ -103,10 +103,6 @@ defmodule KitchenScript.Recipe do
 
       unless var!(makes) do
         raise "Must specify the amount made"
-      end
-
-      unless var!(servings) do
-        raise "Must specify number of servings"
       end
 
       %KitchenScript.Recipe{

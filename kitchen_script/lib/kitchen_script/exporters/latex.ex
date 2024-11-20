@@ -6,6 +6,8 @@ defmodule KitchenScript.Exporters.LaTeX do
     \\usepackage{varioref}
     \\usepackage{hyperref}
     \\usepackage{cleveref}
+    \\usepackage{enumitem}
+    \\setlist{nosep}
     \\title{#{title}}
     \\author{#{author}}
 
@@ -62,8 +64,24 @@ defmodule KitchenScript.Exporters.LaTeX do
   end
 
   defp render_unit({qty, unit}) do
-    "#{qty} \\emph{#{unit}}"
+    "\\emph{#{qty} #{unit}}"
   end
+
+  def time_string({q, :hours}) do
+    m = (q - floor(q)) * 60
+
+    if m > 0 do
+      "(#{q}h#{m}) "
+    else
+      "(#{q} hours) "
+    end
+  end
+
+  def time_string({q, :minutes}) do
+    "(#{q} minutes) "
+  end
+
+  def time_string(nil), do: ""
 
   def render_steps(steps, ingredients) do
     bindings =
@@ -71,8 +89,8 @@ defmodule KitchenScript.Exporters.LaTeX do
         {label, render_unit(qty) <> " #{name}"}
       end
 
-    for step <- steps, into: "" do
-      "\\item " <> EEx.eval_string(step, assigns: bindings) <> "\n"
+    for {step, time} <- steps, into: "" do
+      "\\item #{time_string(time)}" <> EEx.eval_string(step, assigns: bindings) <> "\n"
     end
   end
 
