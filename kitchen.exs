@@ -1,5 +1,5 @@
 defmodule Recipe do
-  defstruct [:name, :ingredients, :steps, :makes]
+  defstruct [:name, :ingredients, :steps, :makes, :servings]
 end
 
 defmodule Ingredient do
@@ -16,6 +16,9 @@ defmodule Kitchen do
       # Module.register_attribute(__MODULE__, :kitchen_makes)
       Module.register_attribute(__MODULE__, :kitchen_ingredients, accumulate: true)
       Module.register_attribute(__MODULE__, :kitchen_final, accumulate: true)
+
+      Module.register_attribute(__MODULE__, :kitchen_shopping_list, accumulate: true)
+      Module.register_attribute(__MODULE__, :kitchen_prep_list, accumulate: true)
       # Module.register_attribute(__MODULE__, :kitchen_ingredient_bindings, accumulate: false)
     end
   end
@@ -32,12 +35,13 @@ defmodule Kitchen do
         name: unquote(name),
         ingredients: @kitchen_ingredients,
         steps: @kitchen_steps,
-        makes: @kitchen_makes
+        makes: @kitchen_makes,
+        servings: @kitchen_servings
       }
 
       Module.delete_attribute(__MODULE__, :kitchen_ingredients)
       Module.delete_attribute(__MODULE__, :kitchen_steps)
-      Module.delete_attribute(__MODULE__, :kitchen_makes)
+      # Module.delete_attribute(__MODULE__, :kitchen_makes)
     end
   end
 
@@ -59,11 +63,14 @@ defmodule Kitchen do
         raise "Duplicate item"
       end
 
-      @kitchen_ingredients %Ingredient{
+      ing = %Ingredient{
         label: unquote(label),
         ingredient: unquote(name),
         qty: unquote(qty)
       }
+
+      @kitchen_ingredients ing
+      @kitchen_ingredient ing
     end
   end
 
@@ -77,6 +84,12 @@ defmodule Kitchen do
   defmacro makes(qty) do
     quote do
       @kitchen_makes unquote(qty)
+    end
+  end
+
+  defmacro servings(qty) do
+    quote do
+      @kitchen_servings unquote(qty)
     end
   end
 
@@ -101,7 +114,7 @@ defmodule Kitchen do
     end
   end
 
-  defmacro make(qty, name) do
+  defmacro make(qty, name) when is_integer(qty) do
     quote do
       unless is_integer(unquote(qty)) do
         raise "Only integer servings"
@@ -113,20 +126,51 @@ defmodule Kitchen do
         raise "no recipe"
       end
 
-      scale = unquote(qty) / recipe.makes
+      scale = unquote(qty) / recipe.servings
 
       # TODO limit scale down
 
       ingredients = Kitchen.scale_down_ingredients(recipe.ingredients, scale)
 
+      {q, unit} = recipe.makes
+
       @kitchen_final %Recipe{
         name: recipe.name,
         ingredients: ingredients,
         steps: Kitchen.render_steps(recipe.steps, ingredients),
-        makes: unquote(qty)
+        makes: {q * scale, unit},
+        servings: unquote(qty)
       }
     end
   end
+
+  # TODO scale units
+  # defmacro make({qty, unit}, name) when is_integer(qty) do
+  #   quote do
+  #     unless is_integer(unquote(qty)) do
+  #       raise "Only integer servings"
+  #     end
+
+  #     recipe = Enum.find(@kitchen_recipes, &(&1.name == unquote(name)))
+
+  #     unless recipe do
+  #       raise "no recipe"
+  #     end
+
+  #     scale = unquote(qty) / recipe.makes
+
+  #     # TODO limit scale down
+
+  #     ingredients = Kitchen.scale_down_ingredients(recipe.ingredients, scale)
+
+  #     @kitchen_final %Recipe{
+  #       name: recipe.name,
+  #       ingredients: ingredients,
+  #       steps: Kitchen.render_steps(recipe.steps, ingredients),
+  #       makes: unquote(qty)
+  #     }
+  #   end
+  # end
 
   defmacro print_kitchen() do
     quote do
@@ -171,8 +215,25 @@ defmodule Kitchen do
 
         # Steps
         #{step_list}
+
+        #{inspect @kitchen_prep_list}
+        #{inspect @kitchen_shopping_list}
         """)
       end
+    end
+  end
+
+  defmacro source(a = {:ingredient, _line, _body}) do
+    quote do
+      unquote(a)
+      @kitchen_shopping_list @kitchen_ingredient
+    end
+  end
+
+  defmacro make(a = {:ingredient, _line, _body}) do
+    quote do
+      unquote(a)
+      @kitchen_prep_list @kitchen_ingredient
     end
   end
 end
@@ -180,12 +241,19 @@ end
 defmodule MyRecipe do
   use Kitchen
 
+  recipe "bar ingredient" do
+    servings(2)
+    makes({2, :cup})
+    source ingredient(:baz, "baz", {1, :cup})
+  end
+
   recipe "creme brulee" do
-    makes(4)
+    servings(4)
 
     ingredients do
-      ingredient(:eggs, "eggs", {2, :each})
-      ingredient(:milk, "milk", {1, :cup})
+      source ingredient(:eggs, "eggs", {2, :each})
+      source ingredient(:milk, "milk", {1, :cup})
+      make ingredient(:foo, "bar ingredient", {1, :cup})
     end
 
     steps do
