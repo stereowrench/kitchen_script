@@ -105,6 +105,11 @@ defmodule Kitchen.Recipe do
       var!(makes) = nil
       var!(servings) = nil
 
+      # Hack to make warnings go away
+      _hack = var!(steps)
+      _hack = var!(makes)
+      _hack = var!(servings)
+
       unquote(recipe_instrs)
 
       unless var!(makes) do
@@ -186,7 +191,6 @@ end
 
 defmodule Kitchen do
   require Kitchen.Recipe
-  alias Kitchen.Ingredient
   alias Kitchen.Recipe
 
   defmacro __using__(_) do
@@ -230,6 +234,10 @@ defmodule Kitchen do
         Recipe.recipe unquote(name) do
           unquote(recipe_instrs)
         end
+
+      if is_nil(recipe.steps) do
+        raise "Recipe must have steps"
+      end
 
       @kitchen_recipes recipe
       # Module.delete_attribute(__MODULE__, :kitchen_makes)
@@ -476,6 +484,10 @@ defmodule MyRecipe do
     ingredients do
       source(ingredient(:baz, "baz", {1, :cup}))
     end
+
+    steps do
+      step("Whisk it")
+    end
   end
 
   recipe "creme brulee" do
@@ -498,7 +510,7 @@ defmodule MyRecipe do
 
   make(1, "creme brulee")
 
-  # print_kitchen()
+  print_kitchen()
 end
 
 defmodule Thing do
