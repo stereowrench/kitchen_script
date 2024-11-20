@@ -58,6 +58,12 @@ defmodule Kitchen.Recipe do
       end
     end
 
+    defmacro ingredients(do: sub) do
+      quote do
+        var!(ingredients) = [Kitchen.Recipe.RecipeMacros.create_ingredient(unquote(sub))]
+      end
+    end
+
     defmacro step(string) do
       quote do
         unquote(string)
@@ -70,22 +76,51 @@ defmodule Kitchen.Recipe do
       end
     end
 
+    defmacro steps(do: single) do
+      quote do
+        var!(steps) = [unquote(single)]
+      end
+    end
+
+    defmacro makes(qty) do
+      quote do
+        var!(makes) = unquote(qty)
+      end
+    end
+
+    defmacro servings(qty) do
+      quote do
+        var!(servings) = unquote(qty)
+      end
+    end
+
     # TODO makes and servings
   end
 
   defmacro recipe(name, do: recipe_instrs) do
-    quote do
+    quote location: :keep do
       import RecipeMacros
 
       var!(steps) = nil
+      var!(makes) = nil
+      var!(servings) = nil
+
       unquote(recipe_instrs)
+
+      unless var!(makes) do
+        raise "Must specify the amount made"
+      end
+
+      unless var!(servings) do
+        raise "Must specify number of servings"
+      end
 
       %Kitchen.Recipe{
         name: unquote(name),
         ingredients: var!(ingredients),
-        steps: var!(steps)
-        # makes: makes,
-        # servings: servings
+        steps: var!(steps),
+        makes: var!(makes),
+        servings: var!(servings)
       }
     end
   end
@@ -150,6 +185,7 @@ defmodule RecipeUnits do
 end
 
 defmodule Kitchen do
+  require Kitchen.Recipe
   alias Kitchen.Ingredient
   alias Kitchen.Recipe
 
@@ -171,74 +207,41 @@ defmodule Kitchen do
 
   defmacro recipe(name, do: recipe_instrs) do
     quote do
+      require Recipe
+
       if Enum.find(@kitchen_recipes, &(&1.name == unquote(name))) do
         raise "Recipe already exists"
       end
 
-      unquote(recipe_instrs)
+      # unquote(recipe_instrs)
 
-      @kitchen_recipes %Recipe{
-        name: unquote(name),
-        ingredients: @kitchen_ingredients,
-        steps: @kitchen_steps,
-        makes: @kitchen_makes,
-        servings: @kitchen_servings
-      }
+      # @kitchen_recipes %Recipe{
+      #   name: unquote(name),
+      #   ingredients: @kitchen_ingredients,
+      #   steps: @kitchen_steps,
+      #   makes: @kitchen_makes,
+      #   servings: @kitchen_servings
+      # }
 
-      Module.delete_attribute(__MODULE__, :kitchen_ingredients)
-      Module.delete_attribute(__MODULE__, :kitchen_steps)
+      # Module.delete_attribute(__MODULE__, :kitchen_ingredients)
+      # Module.delete_attribute(__MODULE__, :kitchen_steps)
+
+      recipe =
+        Recipe.recipe unquote(name) do
+          unquote(recipe_instrs)
+        end
+
+      @kitchen_recipes recipe
       # Module.delete_attribute(__MODULE__, :kitchen_makes)
     end
   end
 
-  defmacro ingredients(do: ingredients) do
-    quote do
-      unquote(ingredients)
-    end
-  end
-
-  defmacro steps(do: steps) do
-    quote do
-      unquote(steps)
-    end
-  end
-
-  defmacro ingredient(label, name, qty) do
-    quote do
-      if Enum.find(@kitchen_ingredients, &(&1.label == unquote(label))) do
-        raise "Duplicate item"
-      end
-
-      ing = %Ingredient{
-        label: unquote(label),
-        ingredient: unquote(name),
-        qty: unquote(qty),
-        recipe: if(@kitchen_make_recipe, do: unquote(name))
-      }
-
-      @kitchen_ingredients ing
-      @kitchen_ingredient ing
-    end
-  end
-
-  defmacro step(instructions) do
-    quote do
-      @kitchen_steps unquote(instructions)
-      # EEx.eval_string(unquote(instructions), @kitchen_ingredient_bindings)
-    end
-  end
-
-  defmacro makes(qty) do
-    quote do
-      @kitchen_makes unquote(qty)
-    end
-  end
-
-  defmacro servings(qty) do
-    quote do
-      @kitchen_servings unquote(qty)
-    end
-  end
+  # defmacro step(instructions) do
+  #   quote do
+  #     @kitchen_steps unquote(instructions)
+  #     # EEx.eval_string(unquote(instructions), @kitchen_ingredient_bindings)
+  #   end
+  # end
 
   def render_unit({qty, unit}) do
     "#{qty} #{unit}"
@@ -262,7 +265,7 @@ defmodule Kitchen do
   end
 
   defmacro make(qty, name, remainder \\ nil) do
-    quote do
+    quote location: :keep do
       case unquote(qty) do
         q when is_integer(q) ->
           :ok
@@ -374,7 +377,7 @@ defmodule Kitchen do
   end
 
   defmacro print_kitchen() do
-    quote do
+    quote location: :keep do
       recipes = Kitchen.order_recipes(List.flatten(@kitchen_final))
       # TODO shopping list
       Kitchen.gather_ingredients(recipes)
@@ -426,22 +429,6 @@ defmodule Kitchen do
       end
     end
   end
-
-  defmacro source(a = {:ingredient, _line, _body}) do
-    quote do
-      @kitchen_make_recipe false
-      unquote(a)
-      @kitchen_shopping_list @kitchen_ingredient
-    end
-  end
-
-  defmacro make(a = {:ingredient, _line, _body}) do
-    quote do
-      @kitchen_make_recipe true
-      unquote(a)
-      @kitchen_prep_list @kitchen_ingredient
-    end
-  end
 end
 
 defmodule Kitchen.Ingredients.Eggs do
@@ -454,6 +441,9 @@ defimpl Kitchen.Techniques.Poach, for: Kitchen.Ingredients.Eggs do
 
   def recipe(_egg) do
     Recipe.recipe "poached egg" do
+      makes(1)
+      servings(0.5)
+
       ingredients do
         source(ingredient(:eggs, "eggs", {1, :each}))
         make(ingredient(:eggs2, "eggs", {1, :each}))
@@ -482,11 +472,15 @@ defmodule MyRecipe do
   recipe "bar ingredient" do
     servings(2)
     makes({2, :cup})
-    source(ingredient(:baz, "baz", {1, :cup}))
+
+    ingredients do
+      source(ingredient(:baz, "baz", {1, :cup}))
+    end
   end
 
   recipe "creme brulee" do
     servings(4)
+    makes({1, :cup})
 
     ingredients do
       source(ingredient(:eggs, "eggs", {2, :each}))
