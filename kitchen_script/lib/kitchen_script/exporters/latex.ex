@@ -85,8 +85,9 @@ defmodule KitchenScript.Exporters.LaTeX do
     denom = b
 
     part_fraction = if n > 0, do: "\\sfrac{#{numerator}}{#{denom}}", else: ""
-    whole_str = if whole > 0, do: "#{whole} ", else: ""
-    "\\emph{#{whole_str}#{part_fraction} #{unit}}"
+    whole_str = if whole > 0, do: "#{whole}", else: ""
+    unit = if unit, do: " #{unit}", else: ""
+    "\\emph{#{whole_str}#{part_fraction}#{unit}}"
   end
 
   def time_string({q, :hours}) do
@@ -116,8 +117,11 @@ defmodule KitchenScript.Exporters.LaTeX do
     end
   end
 
+  # defp roundit(q) when is_integer(q), do: q
+  # defp roundit(q) when is_float(q), do: Float.round(q, 2)
+
   defp format_yield({q, unit}) do
-    "#{q} #{unit}"
+    "#{render_unit({q, ""})}#{unit}"
   end
 
   defp format_recipe(recipe) do

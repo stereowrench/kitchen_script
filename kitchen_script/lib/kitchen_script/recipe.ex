@@ -31,6 +31,7 @@ defmodule KitchenScript.Recipe do
       %Ingredient{
         label: label,
         ingredient: ingredient_name(ingredient),
+        module: ingredient,
         qty: {qty, unit},
         recipe: ingredient
       }
@@ -40,6 +41,7 @@ defmodule KitchenScript.Recipe do
       %Ingredient{
         label: label,
         ingredient: ingredient_name(ingredient),
+        module: ingredient,
         qty: {qty, unit}
       }
     end

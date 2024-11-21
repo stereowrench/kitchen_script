@@ -5,4 +5,9 @@ defmodule KitchenScript.Ingredients.Onion do
   def name do
     "Onion"
   end
+
+  @impl true
+  def min_qty() do
+    {1 / 3, :tsp}
+  end
 end

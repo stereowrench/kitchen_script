@@ -1,4 +1,8 @@
 defmodule KitchenScript.RecipeUnits do
+  def scale_down({q, :gallon}) do
+    scale_down({q * 4, :quart})
+  end
+
   def scale_down({q, :quart}) do
     scale_down({q * 2, :pint})
   end
@@ -64,9 +68,19 @@ defmodule KitchenScript.RecipeUnits do
       for m <- measurements do
         scale_down(m)
       end
-      |> Enum.map(fn {q, :tsp} -> q end)
+
+    # |> Enum.map(fn
+    #   {q, :tsp} -> q
+    #   {q, :oz} -> q
+    #   end)
+
+    {_, unit} = hd(t)
+
+    t =
+      t
+      |> Enum.map(fn {q, _} -> q end)
       |> Enum.sum()
 
-    scale_up({t, :tsp})
+    scale_up({t, unit})
   end
 end
