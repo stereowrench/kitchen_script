@@ -24,10 +24,13 @@ defmodule KitchenScript.Recipe do
       end
     end
 
+    def ingredient_name(ingredient) when is_binary(ingredient), do: ingredient
+    def ingredient_name(ingredient) when is_atom(ingredient), do: ingredient.name()
+
     def create_ingredient({:make, [label, ingredient, {qty, unit}]}) do
       %Ingredient{
         label: label,
-        ingredient: ingredient,
+        ingredient: ingredient_name(ingredient),
         qty: {qty, unit},
         recipe: ingredient
       }
@@ -36,7 +39,7 @@ defmodule KitchenScript.Recipe do
     def create_ingredient({:source, [label, ingredient, {qty, unit}]}) do
       %Ingredient{
         label: label,
-        ingredient: ingredient,
+        ingredient: ingredient_name(ingredient),
         qty: {qty, unit}
       }
     end

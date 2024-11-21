@@ -1,6 +1,11 @@
 defmodule RamenWeek do
   use KitchenScript
 
+ # chicken feet
+ # chicken wings
+ # pork neckbones
+ # chicken backs
+
   recipe "tonkotsu broth" do
     # servings(8)
     makes({4, :quart})
@@ -8,7 +13,8 @@ defmodule RamenWeek do
     ingredients do
       source(ingredient(:pork_bones, "pork bones", {3, :lb}))
       source(ingredient(:pigs_feet, "pigs feet", {2, :lb}))
-      source(ingredient(:onion, "onion", {1, :each}))
+      source(ingredient(:onion, KitchenScript.Ingredients.Onion, {1, :each}))
+      # source(ingredient(:onion, "onion", {1, :each}))
       source(ingredient(:water, "water", {14, :cup}))
     end
 
