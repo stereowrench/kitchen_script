@@ -117,31 +117,39 @@ defmodule KitchenScript do
                function_exported?(ingredient.module, :min_qty, 0) do
             {q, unit} = ingredient.module.min_qty() |> RecipeUnits.scale_down()
             {qty, _} = RecipeUnits.scale_down(ingredient.qty)
-            {q / qty, ingredient.ingredient}
+            {q / qty, ingredient.ingredient, ingredient.module}
           else
             case RecipeUnits.scale_down(ingredient.qty) do
               {a, :tsp} ->
-                {1 / (4 * a), ingredient.ingredient}
+                {1 / (4 * a), ingredient.ingredient, nil}
 
               {a, :oz} ->
-                {1 / (4 * a), ingredient.ingredient}
+                {1 / (4 * a), ingredient.ingredient, nil}
 
               {a, :each} ->
-                {1 / (8 * a), ingredient.ingredient}
+                {1 / (8 * a), ingredient.ingredient, nil}
             end
           end
         end
 
       min_scale =
         scales
-        |> Enum.map(fn {q, _name} -> q end)
+        |> Enum.map(fn {q, _name, module} -> q end)
         |> Enum.sort()
         |> List.last()
 
       invalid_scale_ingredients =
         scales
-        |> Enum.reject(fn {q, _name} -> q < min_scale end)
-        |> Enum.map(fn {_, name} -> name end)
+        |> Enum.reject(fn {q, _name, module} -> q < min_scale end)
+        |> Enum.map(fn
+          {_, name, nil} ->
+            name
+
+          {_, name, module} ->
+            {a, unit} = module.min_qty()
+
+            "#{name} (min qty. #{a} #{unit})"
+        end)
         |> Enum.join(", ")
 
       {scale, note} =
