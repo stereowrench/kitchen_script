@@ -8,6 +8,6 @@ defmodule KitchenScript.Ingredients.Onion do
 
   @impl true
   def min_qty() do
-    {1 / 3, :tsp}
+    {1 / 8, :each}
   end
 end

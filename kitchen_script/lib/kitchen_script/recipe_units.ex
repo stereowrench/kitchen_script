@@ -12,10 +12,10 @@ defmodule KitchenScript.RecipeUnits do
   end
 
   def scale_down({q, :cup}) do
-    scale_down({q * 8, :oz})
+    scale_down({q * 8, :fl_oz})
   end
 
-  def scale_down({q, :oz}) do
+  def scale_down({q, :fl_oz}) do
     scale_down({q * 2, :tbsp})
   end
 
@@ -27,6 +27,10 @@ defmodule KitchenScript.RecipeUnits do
     {q, :tsp}
   end
 
+  def scale_down({q, :oz}) do
+    {q, :oz}
+  end
+
   def scale_down({q, :lb}) do
     {q * 16, :oz}
   end
@@ -36,7 +40,8 @@ defmodule KitchenScript.RecipeUnits do
   end
 
   def scale_up({q, :tsp}) when q < 3, do: {q, :tsp}
-  def scale_up({q, :tsp}) when q < 12, do: {q / 3, :tbsp}
+  def scale_up({q, :tsp}) when q < 6, do: {q / 3, :tbsp}
+  def scale_up({q, :tsp}) when q < 12, do: {q / 6, :fl_oz}
   def scale_up({q, :tsp}) when q < 48, do: {q / 12, :cup}
   def scale_up({q, :tsp}) when q < 192, do: {q / 48, :pint}
   def scale_up({q, :tsp}) when q < 768, do: {q / 192, :quart}

@@ -111,33 +111,43 @@ defmodule KitchenScript do
           a / b
         end
 
-      min_scale =
+      scales =
         for ingredient <- recipe.ingredients do
           if is_atom(ingredient.module) and
                function_exported?(ingredient.module, :min_qty, 0) do
             {q, unit} = ingredient.module.min_qty() |> RecipeUnits.scale_down()
             {qty, _} = RecipeUnits.scale_down(ingredient.qty)
-            q / qty
+            {q / qty, ingredient.ingredient}
           else
             case RecipeUnits.scale_down(ingredient.qty) do
               {a, :tsp} ->
-                1 / (4 * a)
+                {1 / (4 * a), ingredient.ingredient}
 
               {a, :oz} ->
-                1 / (4 * a)
+                {1 / (4 * a), ingredient.ingredient}
 
               {a, :each} ->
-                1 / (8 * a)
+                {1 / (8 * a), ingredient.ingredient}
             end
           end
         end
+
+      min_scale =
+        scales
+        |> Enum.map(fn {q, _name} -> q end)
         |> Enum.sort()
         |> List.last()
+
+      invalid_scale_ingredients =
+        scales
+        |> Enum.reject(fn {q, _name} -> q < min_scale end)
+        |> Enum.map(fn {_, name} -> name end)
+        |> Enum.join(", ")
 
       {scale, note} =
         if min_scale > scale do
           {min_scale,
-           "Recipe was scaled up to #{Float.round(min_scale, 2)} of a recipe instead of #{scale}."}
+           "Recipe was scaled up to #{Float.round(min_scale, 2)} of a recipe instead of #{scale} because the following ingredient were too small of a scale: #{invalid_scale_ingredients}"}
         else
           {scale, nil}
         end
