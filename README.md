@@ -2,6 +2,15 @@
 
 KitchenScript is an Elixir DSL for managing recipes.
 
+## Features
+
+- [x] Recipe dependencies
+- [x] Per-ingredient minimum quantities
+- [x] Recipe scaling
+- [x] Total ingredient summation
+- [x] Minimum recipe scale
+- [ ] Substitutes
+
 ## Example
 
 ```elixir
