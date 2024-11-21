@@ -70,19 +70,27 @@ defmodule KitchenScript.Exporters.LaTeX do
 
     # nearest half
     # half = Float.round(part * 2) / 2
-    third = Float.round(part * 3) / 3
-    half = Float.round(part * 2) / 2
-    quarter = Float.round(part * 4) / 4
-    eighth = Float.round(part * 8) / 8
+    {n, numerator, denom} =
+      if part != 0 do
+        third = Float.round(part * 3) / 3
+        half = Float.round(part * 2) / 2
+        quarter = Float.round(part * 4) / 4
+        eighth = Float.round(part * 8) / 8
 
-    my_min =
-      Enum.min_by([{third, 3}, {half, 2}, {quarter, 4}, {eighth, 8}], fn {a, _} ->
-        abs(part - a)
-      end)
+        my_min =
+          Enum.min_by([{third, 3}, {half, 2}, {quarter, 4}, {eighth, 8}], fn {a, b} ->
+            IO.inspect(eighth)
+            IO.inspect({a, b, part - a})
+            abs(part - a)
+          end)
 
-    {n, b} = my_min
-    numerator = round(n * b)
-    denom = b
+        {n, b} = my_min
+        numerator = part / (1 / b)
+        denom = b
+        {n, numerator, denom}
+      else
+        {0, nil, nil}
+      end
 
     part_fraction = if n > 0, do: "\\sfrac{#{numerator}}{#{denom}}", else: ""
     whole_str = if whole > 0, do: "#{whole}", else: ""

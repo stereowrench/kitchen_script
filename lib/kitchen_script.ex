@@ -71,7 +71,7 @@ defmodule KitchenScript do
     end
   end
 
-  defmacro make(qty, name, remainder \\ nil) do
+  defmacro make(qty, name, opts \\ []) do
     quote location: :keep do
       case unquote(qty) do
         q when is_integer(q) ->
@@ -85,13 +85,12 @@ defmodule KitchenScript do
       end
 
       qty = unquote(qty)
-      remainder = unquote(remainder)
       name = unquote(name)
 
-      recipes =
-        if remainder,
-          do: remainder,
-          else: @kitchen_recipes
+      opts = unquote(opts)
+      minimum_amt = Keyword.get(opts, :minimum, nil)
+
+      recipes = @kitchen_recipes
 
       recipe = Enum.find(recipes, &(&1.name == name))
 
@@ -100,9 +99,19 @@ defmodule KitchenScript do
       end
 
       scale =
+        if minimum_amt do
+          {a, unit} = KitchenScript.RecipeUnits.scale_down(minimum_amt)
+          {b, ^unit} = KitchenScript.RecipeUnits.scale_down(recipe.makes)
+          a / b
+        else
+          0
+        end
+
+      scale2 =
         if is_integer(qty) do
           qty / recipe.servings
         else
+          # TODO don't require tsp here
           {a, :tsp} =
             KitchenScript.RecipeUnits.scale_down(unquote(qty))
 
@@ -110,6 +119,8 @@ defmodule KitchenScript do
 
           a / b
         end
+
+      scale = max(scale, scale2)
 
       scales =
         for ingredient <- recipe.ingredients do

@@ -42,8 +42,8 @@ defmodule KitchenScript.RecipeUnits do
   def scale_up({q, :tsp}) when q < 3, do: {q, :tsp}
   def scale_up({q, :tsp}) when q < 6, do: {q / 3, :tbsp}
   def scale_up({q, :tsp}) when q < 12, do: {q / 6, :fl_oz}
-  def scale_up({q, :tsp}) when q < 48, do: {q / 12, :cup}
-  def scale_up({q, :tsp}) when q < 192, do: {q / 48, :pint}
+  def scale_up({q, :tsp}) when q < 96, do: {q / 48, :cup}
+  def scale_up({q, :tsp}) when q < 192, do: {q / 96, :pint}
   def scale_up({q, :tsp}) when q < 768, do: {q / 192, :quart}
   def scale_up({q, :tsp}), do: {q / 768, :gallon}
 
