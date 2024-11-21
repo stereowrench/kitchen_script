@@ -78,9 +78,7 @@ defmodule KitchenScript.Exporters.LaTeX do
         eighth = Float.round(part * 8) / 8
 
         my_min =
-          Enum.min_by([{third, 3}, {half, 2}, {quarter, 4}, {eighth, 8}], fn {a, b} ->
-            IO.inspect(eighth)
-            IO.inspect({a, b, part - a})
+          Enum.min_by([{third, 3}, {half, 2}, {quarter, 4}, {eighth, 8}], fn {a, _} ->
             abs(part - a)
           end)
 
@@ -92,7 +90,7 @@ defmodule KitchenScript.Exporters.LaTeX do
         {0, nil, nil}
       end
 
-    part_fraction = if n > 0, do: "\\sfrac{#{numerator}}{#{denom}}", else: ""
+    part_fraction = if n > 0, do: "\\sfrac{#{round(numerator)}}{#{denom}}", else: ""
     whole_str = if whole > 0, do: "#{whole}", else: ""
     unit = if unit, do: " #{unit}", else: ""
     "\\emph{#{whole_str}#{part_fraction}#{unit}}"
